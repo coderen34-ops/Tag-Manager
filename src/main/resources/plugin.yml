@@ -8,7 +8,7 @@ description: Oyuncu isimlerine önek (prefix) ve sonek (suffix) tag ekler (chat 
 commands:
   tag:
     description: Tag yönetim komutu
-    usage: /tag <set|setsuffix|remove|removesuffix|list|create|deletetag|info|cleanup> [args]
+    usage: /tag <set|setsuffix|remove|removesuffix|setek|removeek|list|create|deletetag|info|cleanup> [args]
     permission: tagplugin.admin
     permission-message: '&cBu komutu kullanmak için yetkin yok.'
 

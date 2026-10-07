@@ -38,6 +38,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 case "deletetag": return this.handleDeleteTag(sender, args);
                 case "info": return this.handleInfo(sender, args);
                 case "cleanup": return this.handleCleanup(sender);
+                case "setek": return this.handleSetEk(sender, args);
+                case "removeek": return this.handleRemoveEk(sender, args);
                 default: this.sendUsage(sender); return true;
             }
         }
@@ -87,6 +89,37 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             }
             return true;
         }
+    }
+
+    // /tag setek <oyuncu> <format...>  — önekin önüne serbest ek etiket (diğer eklentiler için, örn. Aile)
+    private boolean handleSetEk(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(ChatColor.RED + "Kullanım: /tag setek <oyuncu> <format>");
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        if (!target.hasPlayedBefore() && !target.isOnline()) {
+            sender.sendMessage(ChatColor.RED + "Bu oyuncu daha önce sunucuya girmemiş: " + args[1]);
+            return true;
+        }
+        String format = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+        this.tagManager.setPlayerEk(target, format);
+        sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusuna ek etiket atandı: " + ChatColor.translateAlternateColorCodes('&', format));
+        return true;
+    }
+
+    private boolean handleRemoveEk(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Kullanım: /tag removeek <oyuncu>");
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        if (this.tagManager.removePlayerEk(target)) {
+            sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusunun ek etiketi kaldırıldı.");
+        } else {
+            sender.sendMessage(ChatColor.YELLOW + args[1] + " oyuncusunda zaten ek etiket yoktu.");
+        }
+        return true;
     }
 
     private boolean handleList(CommandSender sender) {
@@ -151,6 +184,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.GOLD + "--- " + targetName + " Tag Bilgisi ---");
             sender.sendMessage(ChatColor.YELLOW + "Prefix (Tag): " + (prefix == null ? "Yok" : prefix));
             sender.sendMessage(ChatColor.YELLOW + "Suffix (Sonek): " + (suffix == null ? "Yok" : suffix));
+            String ek = this.tagManager.getPlayerEk(target.getUniqueId());
+            sender.sendMessage(ChatColor.YELLOW + "Ek Etiket: " + (ek == null ? "Yok" : ek + ChatColor.RESET));
             return true;
         }
     }
@@ -174,12 +209,14 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.YELLOW + "/tag removesuffix <oyuncu>" + ChatColor.GRAY + " - Oyuncunun suffixini kaldır");
         sender.sendMessage(ChatColor.YELLOW + "/tag create <tagadı> <format>" + ChatColor.GRAY + " - Yeni tag tanımı oluştur");
         sender.sendMessage(ChatColor.YELLOW + "/tag info <oyuncu>" + ChatColor.GRAY + " - Oyuncunun taglerini göster");
+        sender.sendMessage(ChatColor.YELLOW + "/tag setek <oyuncu> <format>" + ChatColor.GRAY + " - Önekin önüne ek etiket (örn. aile)");
+        sender.sendMessage(ChatColor.YELLOW + "/tag removeek <oyuncu>" + ChatColor.GRAY + " - Ek etiketi kaldır");
     }
 
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> options = new ArrayList<>();
         if (args.length == 1) {
-            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup"));
+            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup", "setek", "removeek"));
             return this.filter(options, args[0]);
         } else if (args.length == 2) {
             switch (args[0].toLowerCase()) {
@@ -188,6 +225,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 case "remove":
                 case "removesuffix":
                 case "info":
+                case "setek":
+                case "removeek":
                     // HATA 2 BURADAYDI: Player import edilmediği için Player::getName çalışmıyordu. Yukarıda import eklendi.
                     return this.filter(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()), args[1]);
                 case "deletetag":

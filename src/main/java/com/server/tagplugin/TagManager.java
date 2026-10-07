@@ -19,6 +19,9 @@ public class TagManager {
     private final Map<String, String> tagDefinitions = new HashMap<>();
     private final Map<UUID, String> playerTags = new HashMap<>();
     private final Map<UUID, String> playerSuffixes = new HashMap<>(); // YENİ: Suffixleri tutan harita
+    // EK ETİKET: Önekin de önünde görünen, diğer eklentilerin (örn. Aile) yönettiği serbest etiket.
+    // Önceden tanımlı tag gerektirmez; doğrudan renkli format saklanır. Önek ve sonekten bağımsızdır.
+    private final Map<UUID, String> playerEkler = new HashMap<>();
     private static final String TEAM_PREFIX = "tagplg_";
 
     public TagManager(TagPlugin plugin) {
@@ -31,6 +34,7 @@ public class TagManager {
         this.tagDefinitions.clear();
         this.playerTags.clear();
         this.playerSuffixes.clear();
+        this.playerEkler.clear();
 
         if (cfg.isConfigurationSection("tagdefs")) {
             for(String key : cfg.getConfigurationSection("tagdefs").getKeys(false)) {
@@ -52,6 +56,8 @@ public class TagManager {
             }
         }
 
+        this.loadEkler(cfg);
+
         // YENİ: Suffix yükleme
         if (cfg.isConfigurationSection("player-suffixes")) {
             for(String key : cfg.getConfigurationSection("player-suffixes").getKeys(false)) {
@@ -62,6 +68,17 @@ public class TagManager {
                 } catch (IllegalArgumentException var6) {
                     this.plugin.getLogger().warning("Geçersiz UUID config'de atlandı (Suffix): " + key);
                 }
+            }
+        }
+    }
+
+    private void loadEkler(FileConfiguration cfg) {
+        if (!cfg.isConfigurationSection("player-ek-tags")) return;
+        for (String key : cfg.getConfigurationSection("player-ek-tags").getKeys(false)) {
+            try {
+                this.playerEkler.put(UUID.fromString(key), cfg.getString("player-ek-tags." + key));
+            } catch (IllegalArgumentException e) {
+                this.plugin.getLogger().warning("Geçersiz UUID config'de atlandı (Ek etiket): " + key);
             }
         }
     }
@@ -83,6 +100,11 @@ public class TagManager {
         cfg.set("player-suffixes", null);
         for(Map.Entry<UUID, String> entry : this.playerSuffixes.entrySet()) {
             cfg.set("player-suffixes." + entry.getKey().toString(), entry.getValue());
+        }
+
+        cfg.set("player-ek-tags", null);
+        for (Map.Entry<UUID, String> entry : this.playerEkler.entrySet()) {
+            cfg.set("player-ek-tags." + entry.getKey().toString(), entry.getValue());
         }
         
         this.plugin.saveConfig();
@@ -128,6 +150,31 @@ public class TagManager {
 
     public String getPlayerSuffixName(UUID uuid) {
         return this.playerSuffixes.get(uuid);
+    }
+
+    /** Oyuncunun ek etiketi (renkli, sonunda boşluk ile) ya da yoksa null. */
+    public String getPlayerEk(UUID uuid) {
+        return this.playerEkler.get(uuid);
+    }
+
+    /** Ek etiketi atar. Format & renk kodlarıyla yazılır; isimle arasında boşluk yoksa otomatik eklenir. */
+    public void setPlayerEk(OfflinePlayer target, String rawFormat) {
+        String colored = ChatColor.translateAlternateColorCodes('&', rawFormat);
+        if (!colored.endsWith(" ")) colored = colored + " ";
+        this.playerEkler.put(target.getUniqueId(), colored);
+        this.saveAll();
+        if (target.isOnline()) {
+            this.updateScoreboardTeam(target.getPlayer());
+        }
+    }
+
+    public boolean removePlayerEk(OfflinePlayer target) {
+        if (this.playerEkler.remove(target.getUniqueId()) == null) return false;
+        this.saveAll();
+        if (target.isOnline()) {
+            this.updateScoreboardTeam(target.getPlayer());
+        }
+        return true;
     }
 
     public boolean setPlayerTag(OfflinePlayer target, String tagName) {
@@ -208,6 +255,9 @@ public class TagManager {
 
         String prefixFormat = prefixName != null && this.tagExists(prefixName) ? this.getTagFormat(prefixName) : "";
         String suffixFormat = suffixName != null && this.tagExists(suffixName) ? this.getTagFormat(suffixName) : "";
+        // Ek etiket önekin önüne gelir: [Ek] [Önek] İsim [Sonek]
+        String ekFormat = this.playerEkler.getOrDefault(player.getUniqueId(), "");
+        prefixFormat = ekFormat + prefixFormat;
 
         Scoreboard board = Bukkit.getScoreboardManager().getMainScoreboard();
         String teamName = "tagplg_" + player.getUniqueId().toString().substring(0, 12);
