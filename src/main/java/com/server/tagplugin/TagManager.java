@@ -19,7 +19,7 @@ public class TagManager {
     private final Map<String, String> tagDefinitions = new HashMap<>();
     private final Map<UUID, String> playerTags = new HashMap<>();
     private final Map<UUID, String> playerSuffixes = new HashMap<>(); // YENİ: Suffixleri tutan harita
-    // EK ETİKET: Önekin de önünde görünen, diğer eklentilerin (örn. Aile) yönettiği serbest etiket.
+    // EK ETİKET: Önekin de önünde görünen, diğer eklentilerin (örn. Klan) yönettiği serbest etiket.
     // Önceden tanımlı tag gerektirmez; doğrudan renkli format saklanır. Önek ve sonekten bağımsızdır.
     private final Map<UUID, String> playerEkler = new HashMap<>();
     private static final String TEAM_PREFIX = "tagplg_";

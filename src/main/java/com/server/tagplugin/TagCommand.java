@@ -91,7 +91,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         }
     }
 
-    // /tag setek <oyuncu> <format...>  — önekin önüne serbest ek etiket (diğer eklentiler için, örn. Aile)
+    // /tag setek <oyuncu> <format...>  — önekin önüne serbest ek etiket (diğer eklentiler için, örn. Klan)
     private boolean handleSetEk(CommandSender sender, String[] args) {
         if (args.length < 3) {
             sender.sendMessage(ChatColor.RED + "Kullanım: /tag setek <oyuncu> <format>");
@@ -209,7 +209,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.YELLOW + "/tag removesuffix <oyuncu>" + ChatColor.GRAY + " - Oyuncunun suffixini kaldır");
         sender.sendMessage(ChatColor.YELLOW + "/tag create <tagadı> <format>" + ChatColor.GRAY + " - Yeni tag tanımı oluştur");
         sender.sendMessage(ChatColor.YELLOW + "/tag info <oyuncu>" + ChatColor.GRAY + " - Oyuncunun taglerini göster");
-        sender.sendMessage(ChatColor.YELLOW + "/tag setek <oyuncu> <format>" + ChatColor.GRAY + " - Önekin önüne ek etiket (örn. aile)");
+        sender.sendMessage(ChatColor.YELLOW + "/tag setek <oyuncu> <format>" + ChatColor.GRAY + " - Önekin önüne ek etiket (örn. klan)");
         sender.sendMessage(ChatColor.YELLOW + "/tag removeek <oyuncu>" + ChatColor.GRAY + " - Ek etiketi kaldır");
     }
 
