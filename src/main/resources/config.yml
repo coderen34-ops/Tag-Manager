@@ -1,0 +1,2 @@
+# TagPlugin verileri. Komutlarla (/tag create, /tag set ...) yönetilir; elle düzenlemeniz gerekmez.
+tagdefs: {}

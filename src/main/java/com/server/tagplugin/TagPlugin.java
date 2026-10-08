@@ -65,6 +65,10 @@ public class TagPlugin extends JavaPlugin implements Listener {
             if (rawFormat != null) finalSuffix = LegacyComponentSerializer.legacySection().deserialize(rawFormat);
         }
 
+        // Lig etiketi (Arena Ligi) sonekin arkasına gelir
+        String ligFormat = this.tagManager.getPlayerLig(event.getPlayer().getUniqueId());
+        if (ligFormat != null) finalSuffix = finalSuffix.append(LegacyComponentSerializer.legacySection().deserialize(ligFormat));
+
         Component playerName = Component.text(event.getPlayer().getName());
         Component separator = Component.text(": ");
         

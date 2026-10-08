@@ -40,6 +40,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 case "cleanup": return this.handleCleanup(sender);
                 case "setek": return this.handleSetEk(sender, args);
                 case "removeek": return this.handleRemoveEk(sender, args);
+                case "setlig": return this.handleSetLig(sender, args);
+                case "removelig": return this.handleRemoveLig(sender, args);
                 default: this.sendUsage(sender); return true;
             }
         }
@@ -105,6 +107,34 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         String format = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
         this.tagManager.setPlayerEk(target, format);
         sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusuna ek etiket atandı: " + ChatColor.translateAlternateColorCodes('&', format));
+        return true;
+    }
+
+    // /tag setlig <oyuncu> <format...>  — sonekin arkasına lig etiketi (Arena Ligi için)
+    private boolean handleSetLig(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(ChatColor.RED + "Kullanım: /tag setlig <oyuncu> <format>");
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        if (!target.hasPlayedBefore() && !target.isOnline()) {
+            sender.sendMessage(ChatColor.RED + "Bu oyuncu daha önce sunucuya girmemiş: " + args[1]);
+            return true;
+        }
+        String format = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+        this.tagManager.setPlayerLig(target, format);
+        sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusuna lig etiketi atandı: " + ChatColor.translateAlternateColorCodes('&', format));
+        return true;
+    }
+
+    private boolean handleRemoveLig(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Kullanım: /tag removelig <oyuncu>");
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        if (this.tagManager.removePlayerLig(target)) sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusunun lig etiketi kaldırıldı.");
+        else sender.sendMessage(ChatColor.RED + args[1] + " oyuncusunun lig etiketi yok.");
         return true;
     }
 
@@ -211,12 +241,14 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.YELLOW + "/tag info <oyuncu>" + ChatColor.GRAY + " - Oyuncunun taglerini göster");
         sender.sendMessage(ChatColor.YELLOW + "/tag setek <oyuncu> <format>" + ChatColor.GRAY + " - Önekin önüne ek etiket (örn. klan)");
         sender.sendMessage(ChatColor.YELLOW + "/tag removeek <oyuncu>" + ChatColor.GRAY + " - Ek etiketi kaldır");
+        sender.sendMessage(ChatColor.YELLOW + "/tag setlig <oyuncu> <format>" + ChatColor.GRAY + " - Sonekin arkasına lig etiketi (Arena Ligi)");
+        sender.sendMessage(ChatColor.YELLOW + "/tag removelig <oyuncu>" + ChatColor.GRAY + " - Lig etiketini kaldır");
     }
 
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> options = new ArrayList<>();
         if (args.length == 1) {
-            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup", "setek", "removeek"));
+            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup", "setek", "removeek", "setlig", "removelig"));
             return this.filter(options, args[0]);
         } else if (args.length == 2) {
             switch (args[0].toLowerCase()) {
@@ -227,6 +259,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 case "info":
                 case "setek":
                 case "removeek":
+                case "setlig":
+                case "removelig":
                     // HATA 2 BURADAYDI: Player import edilmediği için Player::getName çalışmıyordu. Yukarıda import eklendi.
                     return this.filter(Bukkit.getOnlinePlayers().stream().map(Player::getName).collect(Collectors.toList()), args[1]);
                 case "deletetag":
