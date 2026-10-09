@@ -38,6 +38,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 case "deletetag": return this.handleDeleteTag(sender, args);
                 case "info": return this.handleInfo(sender, args);
                 case "cleanup": return this.handleCleanup(sender);
+                case "setkurucu": return this.handleSetKurucu(sender, args);
+                case "removekurucu": return this.handleRemoveKurucu(sender, args);
                 case "setek": return this.handleSetEk(sender, args);
                 case "removeek": return this.handleRemoveEk(sender, args);
                 case "setlig": return this.handleSetLig(sender, args);
@@ -135,6 +137,34 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
         if (this.tagManager.removePlayerLig(target)) sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusunun lig etiketi kaldırıldı.");
         else sender.sendMessage(ChatColor.RED + args[1] + " oyuncusunun lig etiketi yok.");
+        return true;
+    }
+
+    // /tag setkurucu <oyuncu> <format...>  — en başa kurucu etiketi
+    private boolean handleSetKurucu(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(ChatColor.RED + "Kullanım: /tag setkurucu <oyuncu> <format>");
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        if (!target.hasPlayedBefore() && !target.isOnline()) {
+            sender.sendMessage(ChatColor.RED + "Bu oyuncu daha önce sunucuya girmemiş: " + args[1]);
+            return true;
+        }
+        String format = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+        this.tagManager.setPlayerKurucu(target, format);
+        sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusuna kurucu etiketi atandı: " + ChatColor.translateAlternateColorCodes('&', format));
+        return true;
+    }
+
+    private boolean handleRemoveKurucu(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Kullanım: /tag removekurucu <oyuncu>");
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        if (this.tagManager.removePlayerKurucu(target)) sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusunun kurucu etiketi kaldırıldı.");
+        else sender.sendMessage(ChatColor.YELLOW + args[1] + " oyuncusunda kurucu etiketi yok.");
         return true;
     }
 
@@ -243,12 +273,14 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.YELLOW + "/tag removeek <oyuncu>" + ChatColor.GRAY + " - Ek etiketi kaldır");
         sender.sendMessage(ChatColor.YELLOW + "/tag setlig <oyuncu> <format>" + ChatColor.GRAY + " - Sonekin arkasına lig etiketi (Arena Ligi)");
         sender.sendMessage(ChatColor.YELLOW + "/tag removelig <oyuncu>" + ChatColor.GRAY + " - Lig etiketini kaldır");
+        sender.sendMessage(ChatColor.YELLOW + "/tag setkurucu <oyuncu> <format>" + ChatColor.GRAY + " - En başa kurucu etiketi");
+        sender.sendMessage(ChatColor.YELLOW + "/tag removekurucu <oyuncu>" + ChatColor.GRAY + " - Kurucu etiketini kaldır");
     }
 
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> options = new ArrayList<>();
         if (args.length == 1) {
-            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup", "setek", "removeek", "setlig", "removelig"));
+            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup", "setek", "removeek", "setlig", "removelig", "setkurucu", "removekurucu"));
             return this.filter(options, args[0]);
         } else if (args.length == 2) {
             switch (args[0].toLowerCase()) {
@@ -257,6 +289,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 case "remove":
                 case "removesuffix":
                 case "info":
+                case "setkurucu":
+                case "removekurucu":
                 case "setek":
                 case "removeek":
                 case "setlig":

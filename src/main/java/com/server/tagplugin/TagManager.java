@@ -22,6 +22,8 @@ public class TagManager {
     // EK ETİKET: Önekin de önünde görünen, diğer eklentilerin (örn. Klan) yönettiği serbest etiket.
     // Önceden tanımlı tag gerektirmez; doğrudan renkli format saklanır. Önek ve sonekten bağımsızdır.
     private final Map<UUID, String> playerEkler = new HashMap<>();
+    // KURUCU ETİKETİ: en başta görünen, elle (komutla) verilen ayrı etiket: [Kurucu] [Ek] [Önek] İsim [Sonek] [Lig]
+    private final Map<UUID, String> playerKuruculer = new HashMap<>();
     // LİG ETİKETİ: sonekin de arkasında görünen, Arena Ligi'nin yönettiği serbest etiket: [Ek] [Önek] İsim [Sonek] [Lig]
     private final Map<UUID, String> playerLigler = new HashMap<>();
     private static final String TEAM_PREFIX = "tagplg_";
@@ -38,6 +40,7 @@ public class TagManager {
         this.playerSuffixes.clear();
         this.playerEkler.clear();
         this.playerLigler.clear();
+        this.playerKuruculer.clear();
 
         if (cfg.isConfigurationSection("tagdefs")) {
             for(String key : cfg.getConfigurationSection("tagdefs").getKeys(false)) {
@@ -60,6 +63,15 @@ public class TagManager {
         }
 
         this.loadEkler(cfg);
+        if (cfg.isConfigurationSection("player-kurucu-tags")) {
+            for (String key : cfg.getConfigurationSection("player-kurucu-tags").getKeys(false)) {
+                try {
+                    this.playerKuruculer.put(UUID.fromString(key), cfg.getString("player-kurucu-tags." + key));
+                } catch (IllegalArgumentException e) {
+                    this.plugin.getLogger().warning("Geçersiz UUID config'de atlandı (Kurucu etiketi): " + key);
+                }
+            }
+        }
         if (cfg.isConfigurationSection("player-lig-tags")) {
             for (String key : cfg.getConfigurationSection("player-lig-tags").getKeys(false)) {
                 try {
@@ -117,6 +129,11 @@ public class TagManager {
         cfg.set("player-ek-tags", null);
         for (Map.Entry<UUID, String> entry : this.playerEkler.entrySet()) {
             cfg.set("player-ek-tags." + entry.getKey().toString(), entry.getValue());
+        }
+
+        cfg.set("player-kurucu-tags", null);
+        for (Map.Entry<UUID, String> entry : this.playerKuruculer.entrySet()) {
+            cfg.set("player-kurucu-tags." + entry.getKey().toString(), entry.getValue());
         }
 
         cfg.set("player-lig-tags", null);
@@ -183,6 +200,30 @@ public class TagManager {
         if (target.isOnline()) {
             this.updateScoreboardTeam(target.getPlayer());
         }
+    }
+
+    /** Oyuncunun kurucu etiketi (renkli, sonunda boşluk ile) ya da yoksa null. */
+    public String getPlayerKurucu(UUID uuid) {
+        return this.playerKuruculer.get(uuid);
+    }
+
+    public void setPlayerKurucu(OfflinePlayer target, String rawFormat) {
+        String colored = ChatColor.translateAlternateColorCodes('&', rawFormat);
+        if (!colored.endsWith(" ")) colored = colored + " ";
+        this.playerKuruculer.put(target.getUniqueId(), colored);
+        this.saveAll();
+        if (target.isOnline()) {
+            this.updateScoreboardTeam(target.getPlayer());
+        }
+    }
+
+    public boolean removePlayerKurucu(OfflinePlayer target) {
+        if (this.playerKuruculer.remove(target.getUniqueId()) == null) return false;
+        this.saveAll();
+        if (target.isOnline()) {
+            this.updateScoreboardTeam(target.getPlayer());
+        }
+        return true;
     }
 
     /** Oyuncunun lig etiketi (renkli, başında boşluk ile) ya da yoksa null. */
@@ -299,7 +340,7 @@ public class TagManager {
         String suffixFormat = suffixName != null && this.tagExists(suffixName) ? this.getTagFormat(suffixName) : "";
         // Ek etiket önekin önüne gelir: [Ek] [Önek] İsim [Sonek]
         String ekFormat = this.playerEkler.getOrDefault(player.getUniqueId(), "");
-        prefixFormat = ekFormat + prefixFormat;
+        prefixFormat = this.playerKuruculer.getOrDefault(player.getUniqueId(), "") + ekFormat + prefixFormat;
         // Lig etiketi sonekin arkasına gelir: ... İsim [Sonek] [Lig]
         suffixFormat = suffixFormat + this.playerLigler.getOrDefault(player.getUniqueId(), "");
 

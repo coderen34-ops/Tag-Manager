@@ -52,8 +52,10 @@ public class TagPlugin extends JavaPlugin implements Listener {
         Component finalSuffix = Component.empty();
 
         // Ek etiket (örn. klan) önekin önüne gelir
+        String kurucuFormat = this.tagManager.getPlayerKurucu(event.getPlayer().getUniqueId());
+        if (kurucuFormat != null) finalPrefix = LegacyComponentSerializer.legacySection().deserialize(kurucuFormat);
         String ekFormat = this.tagManager.getPlayerEk(event.getPlayer().getUniqueId());
-        if (ekFormat != null) finalPrefix = LegacyComponentSerializer.legacySection().deserialize(ekFormat);
+        if (ekFormat != null) finalPrefix = finalPrefix.append(LegacyComponentSerializer.legacySection().deserialize(ekFormat));
         
         if (prefixName != null) {
             String rawFormat = this.tagManager.getTagFormat(prefixName);
