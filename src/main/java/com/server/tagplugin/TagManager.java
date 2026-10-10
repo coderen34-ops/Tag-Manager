@@ -28,6 +28,14 @@ public class TagManager {
     private final Map<UUID, String> playerLigler = new HashMap<>();
     private static final String TEAM_PREFIX = "tagplg_";
 
+    /** Tag adı karşılaştırması: büyük/küçük harf ve Türkçe karakterler (ı, ş, ğ, ü, ö, ç) önemsiz. */
+    public static String norm(String ad) {
+        if (ad == null) return "";
+        String k = ad.toLowerCase(java.util.Locale.ROOT).replace("ı", "i").replace("ş", "s").replace("ğ", "g")
+                .replace("ü", "u").replace("ö", "o").replace("ç", "c").replace("i̇", "i");
+        return k.trim();
+    }
+
     public TagManager(TagPlugin plugin) {
         this.plugin = plugin;
         this.load();
@@ -46,7 +54,7 @@ public class TagManager {
             for(String key : cfg.getConfigurationSection("tagdefs").getKeys(false)) {
                 String raw = cfg.getString("tagdefs." + key);
                 String colored = raw != null ? ChatColor.translateAlternateColorCodes('&', raw) : null;
-                this.tagDefinitions.put(key.toLowerCase(), colored);
+                this.tagDefinitions.put(norm(key), colored);
             }
         }
 
@@ -145,23 +153,23 @@ public class TagManager {
     }
 
     public boolean tagExists(String tagName) {
-        return this.tagDefinitions.containsKey(tagName.toLowerCase());
+        return this.tagDefinitions.containsKey(norm(tagName));
     }
 
     public void createTag(String tagName, String rawFormat) {
         String colored = ChatColor.translateAlternateColorCodes('&', rawFormat);
-        this.tagDefinitions.put(tagName.toLowerCase(), colored);
+        this.tagDefinitions.put(norm(tagName), colored);
         this.saveAll();
     }
 
     public boolean deleteTagDefinition(String tagName) {
-        String key = tagName.toLowerCase();
+        String key = norm(tagName);
         if (!this.tagDefinitions.containsKey(key)) {
             return false;
         } else {
             this.tagDefinitions.remove(key);
-            this.playerTags.entrySet().removeIf((e) -> e.getValue().equalsIgnoreCase(tagName));
-            this.playerSuffixes.entrySet().removeIf((e) -> e.getValue().equalsIgnoreCase(tagName)); // Suffixi de sil
+            this.playerTags.entrySet().removeIf((e) -> norm(e.getValue()).equals(key));
+            this.playerSuffixes.entrySet().removeIf((e) -> norm(e.getValue()).equals(key)); // Suffixi de sil
             this.saveAll();
             for(Player online : Bukkit.getOnlinePlayers()) {
                 this.updateScoreboardTeam(online); // Direkt güncelle, silme
@@ -171,7 +179,7 @@ public class TagManager {
     }
 
     public String getTagFormat(String tagName) {
-        return this.tagDefinitions.get(tagName.toLowerCase());
+        return this.tagDefinitions.get(norm(tagName));
     }
 
     public Map<String, String> getAllTagDefs() {
@@ -266,7 +274,7 @@ public class TagManager {
         } else {
             if (this.playerTags.containsKey(target.getUniqueId())) {
                 String oldTag = this.playerTags.get(target.getUniqueId());
-                String safeOldTag = oldTag.toLowerCase().replaceAll("[^a-z0-9]", "");
+                String safeOldTag = norm(oldTag).replaceAll("[^a-z0-9]", "");
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + target.getName() + " parent remove " + safeOldTag);
             }
 
@@ -276,7 +284,7 @@ public class TagManager {
                 this.updateScoreboardTeam(target.getPlayer());
             }
             
-            String safeGroupName = tagName.toLowerCase().replaceAll("[^a-z0-9]", "");
+            String safeGroupName = norm(tagName).replaceAll("[^a-z0-9]", "");
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp creategroup " + safeGroupName);
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + target.getName() + " parent add " + safeGroupName);
 
@@ -310,7 +318,7 @@ public class TagManager {
             }
 
             if (oldTag != null) {
-                String safeGroupName = oldTag.toLowerCase().replaceAll("[^a-z0-9]", "");
+                String safeGroupName = norm(oldTag).replaceAll("[^a-z0-9]", "");
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + target.getName() + " parent remove " + safeGroupName);
             }
             return true;

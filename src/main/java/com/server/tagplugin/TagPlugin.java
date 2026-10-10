@@ -35,6 +35,12 @@ public class TagPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.NORMAL)
     public void onJoin(PlayerJoinEvent event) {
+        // İlk kez giren oyuncu Göçmen olarak başlar (tag tanımı varsa ve oyuncuda başka tag yoksa)
+        if (!event.getPlayer().hasPlayedBefore()
+                && this.tagManager.getPlayerTagName(event.getPlayer().getUniqueId()) == null
+                && this.tagManager.tagExists("gocmen")) {
+            this.tagManager.setPlayerTag(event.getPlayer(), "gocmen");
+        }
         this.tagManager.applyStoredTagOnJoin(event.getPlayer());
     }
 
