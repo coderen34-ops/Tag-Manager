@@ -57,17 +57,10 @@ public class TagPlugin extends JavaPlugin implements Listener {
         Component finalPrefix = Component.empty();
         Component finalSuffix = Component.empty();
 
-        // Ek etiket (örn. klan) önekin önüne gelir
-        String kurucuFormat = this.tagManager.getPlayerKurucu(event.getPlayer().getUniqueId());
-        if (kurucuFormat != null) finalPrefix = LegacyComponentSerializer.legacySection().deserialize(kurucuFormat);
-        String ekFormat = this.tagManager.getPlayerEk(event.getPlayer().getUniqueId());
-        if (ekFormat != null) finalPrefix = finalPrefix.append(LegacyComponentSerializer.legacySection().deserialize(ekFormat));
-        
-        if (prefixName != null) {
-            String rawFormat = this.tagManager.getTagFormat(prefixName);
-            if (rawFormat != null) finalPrefix = finalPrefix.append(LegacyComponentSerializer.legacySection().deserialize(rawFormat));
-        }
-        
+        // Chat'te tam sıra: [Kurucu] [Yayıncı] [Ek] [Önek] İsim [Sonek] [Lig]
+        String fullPrefix = this.tagManager.getFullPrefix(event.getPlayer().getUniqueId());
+        if (!fullPrefix.isEmpty()) finalPrefix = LegacyComponentSerializer.legacySection().deserialize(fullPrefix);
+
         if (suffixName != null) {
             String rawFormat = this.tagManager.getTagFormat(suffixName);
             if (rawFormat != null) finalSuffix = LegacyComponentSerializer.legacySection().deserialize(rawFormat);

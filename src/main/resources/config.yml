@@ -1,2 +1,8 @@
 # TagPlugin verileri. Komutlarla (/tag create, /tag set ...) yönetilir; elle düzenlemeniz gerekmez.
 tagdefs: {}
+# Yayıncı etiketinin biçimi (/tag setyayinci <oyuncu>). Kalın yeşil. Değiştirdikten sonra /tag reload.
+yayinci-format: "&a&l[Yayıncı] "
+# Kafanın üstündeki isimde görünsün mü? false = sadece tab listesi ve chat'te görünür.
+kafa-ustu:
+  kurucu: false
+  yayinci: false

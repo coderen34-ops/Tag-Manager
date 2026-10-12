@@ -40,6 +40,9 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 case "cleanup": return this.handleCleanup(sender);
                 case "setkurucu": return this.handleSetKurucu(sender, args);
                 case "removekurucu": return this.handleRemoveKurucu(sender, args);
+                case "setyayinci": return this.handleSetYayinci(sender, args);
+                case "removeyayinci": return this.handleRemoveYayinci(sender, args);
+                case "reload": return this.handleReload(sender);
                 case "setek": return this.handleSetEk(sender, args);
                 case "removeek": return this.handleRemoveEk(sender, args);
                 case "setlig": return this.handleSetLig(sender, args);
@@ -168,6 +171,45 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    // /tag setyayinci <oyuncu>  — kalın yeşil [Yayıncı] etiketi (biçim config'te: yayinci-format)
+    private boolean handleSetYayinci(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Kullanım: /tag setyayinci <oyuncu>");
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        if (!target.hasPlayedBefore() && !target.isOnline()) {
+            sender.sendMessage(ChatColor.RED + "Bu oyuncu daha önce sunucuya girmemiş: " + args[1]);
+            return true;
+        }
+        if (this.tagManager.setPlayerYayinci(target)) {
+            sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusuna yayıncı etiketi verildi: " + this.tagManager.getYayinciFormat() + ChatColor.RESET);
+        } else {
+            sender.sendMessage(ChatColor.YELLOW + args[1] + " oyuncusunda zaten yayıncı etiketi var.");
+        }
+        return true;
+    }
+
+    private boolean handleRemoveYayinci(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Kullanım: /tag removeyayinci <oyuncu>");
+            return true;
+        }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
+        if (this.tagManager.removePlayerYayinci(target)) sender.sendMessage(ChatColor.GREEN + args[1] + " oyuncusunun yayıncı etiketi kaldırıldı.");
+        else sender.sendMessage(ChatColor.YELLOW + args[1] + " oyuncusunda yayıncı etiketi yok.");
+        return true;
+    }
+
+    // /tag reload  — config.yml'i (yayinci-format, kafa-ustu.*) yeniden okur ve herkesin ismini yeniler
+    private boolean handleReload(CommandSender sender) {
+        this.plugin.reloadConfig();
+        this.tagManager.load();
+        this.tagManager.updateAllOnline();
+        sender.sendMessage(ChatColor.GREEN + "TagPlugin ayarları yeniden yüklendi.");
+        return true;
+    }
+
     private boolean handleRemoveEk(CommandSender sender, String[] args) {
         if (args.length < 2) {
             sender.sendMessage(ChatColor.RED + "Kullanım: /tag removeek <oyuncu>");
@@ -246,6 +288,10 @@ public class TagCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.YELLOW + "Suffix (Sonek): " + (suffix == null ? "Yok" : suffix));
             String ek = this.tagManager.getPlayerEk(target.getUniqueId());
             sender.sendMessage(ChatColor.YELLOW + "Ek Etiket: " + (ek == null ? "Yok" : ek + ChatColor.RESET));
+            String kurucu = this.tagManager.getPlayerKurucu(target.getUniqueId());
+            sender.sendMessage(ChatColor.YELLOW + "Kurucu Etiketi: " + (kurucu == null ? "Yok" : kurucu + ChatColor.RESET));
+            String yayinci = this.tagManager.getPlayerYayinci(target.getUniqueId());
+            sender.sendMessage(ChatColor.YELLOW + "Yayıncı Etiketi: " + (yayinci == null ? "Yok" : yayinci + ChatColor.RESET));
             return true;
         }
     }
@@ -275,12 +321,15 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.YELLOW + "/tag removelig <oyuncu>" + ChatColor.GRAY + " - Lig etiketini kaldır");
         sender.sendMessage(ChatColor.YELLOW + "/tag setkurucu <oyuncu> <format>" + ChatColor.GRAY + " - En başa kurucu etiketi");
         sender.sendMessage(ChatColor.YELLOW + "/tag removekurucu <oyuncu>" + ChatColor.GRAY + " - Kurucu etiketini kaldır");
+        sender.sendMessage(ChatColor.YELLOW + "/tag setyayinci <oyuncu>" + ChatColor.GRAY + " - Kalın yeşil [Yayıncı] etiketi (tab + chat)");
+        sender.sendMessage(ChatColor.YELLOW + "/tag removeyayinci <oyuncu>" + ChatColor.GRAY + " - Yayıncı etiketini kaldır");
+        sender.sendMessage(ChatColor.YELLOW + "/tag reload" + ChatColor.GRAY + " - config.yml'i yeniden oku");
     }
 
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> options = new ArrayList<>();
         if (args.length == 1) {
-            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup", "setek", "removeek", "setlig", "removelig", "setkurucu", "removekurucu"));
+            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup", "setek", "removeek", "setlig", "removelig", "setkurucu", "removekurucu", "setyayinci", "removeyayinci", "reload"));
             return this.filter(options, args[0]);
         } else if (args.length == 2) {
             switch (args[0].toLowerCase()) {
@@ -291,6 +340,8 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 case "info":
                 case "setkurucu":
                 case "removekurucu":
+                case "setyayinci":
+                case "removeyayinci":
                 case "setek":
                 case "removeek":
                 case "setlig":

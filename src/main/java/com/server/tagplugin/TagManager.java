@@ -26,7 +26,10 @@ public class TagManager {
     private final Map<UUID, String> playerKuruculer = new HashMap<>();
     // LİG ETİKETİ: sonekin de arkasında görünen, Arena Ligi'nin yönettiği serbest etiket: [Ek] [Önek] İsim [Sonek] [Lig]
     private final Map<UUID, String> playerLigler = new HashMap<>();
+    // YAYINCI ETİKETİ: oyuncuya komutla verilen sabit biçimli (varsayılan kalın yeşil) etiket. Kurucu'dan sonra gelir.
+    private final java.util.Set<UUID> yayincilar = new java.util.HashSet<>();
     private static final String TEAM_PREFIX = "tagplg_";
+    private static final String YAYINCI_VARSAYILAN = "&a&l[Yayıncı] ";
 
     /** Tag adı karşılaştırması: büyük/küçük harf ve Türkçe karakterler (ı, ş, ğ, ü, ö, ç) önemsiz. */
     public static String norm(String ad) {
@@ -49,6 +52,14 @@ public class TagManager {
         this.playerEkler.clear();
         this.playerLigler.clear();
         this.playerKuruculer.clear();
+        this.yayincilar.clear();
+        for (String key : cfg.getStringList("player-yayincilar")) {
+            try {
+                this.yayincilar.add(UUID.fromString(key));
+            } catch (IllegalArgumentException e) {
+                this.plugin.getLogger().warning("Geçersiz UUID config'de atlandı (Yayıncı etiketi): " + key);
+            }
+        }
 
         if (cfg.isConfigurationSection("tagdefs")) {
             for(String key : cfg.getConfigurationSection("tagdefs").getKeys(false)) {
@@ -144,6 +155,10 @@ public class TagManager {
             cfg.set("player-kurucu-tags." + entry.getKey().toString(), entry.getValue());
         }
 
+        java.util.List<String> yayinciListe = new java.util.ArrayList<>();
+        for (UUID u : this.yayincilar) yayinciListe.add(u.toString());
+        cfg.set("player-yayincilar", yayinciListe);
+
         cfg.set("player-lig-tags", null);
         for (Map.Entry<UUID, String> entry : this.playerLigler.entrySet()) {
             cfg.set("player-lig-tags." + entry.getKey().toString(), entry.getValue());
@@ -207,6 +222,77 @@ public class TagManager {
         this.saveAll();
         if (target.isOnline()) {
             this.updateScoreboardTeam(target.getPlayer());
+        }
+    }
+
+    /** Yayıncı etiketinin biçimi (config: yayinci-format, & renk kodlu). Sonunda boşluk garanti edilir. */
+    public String getYayinciFormat() {
+        String raw = this.plugin.getConfig().getString("yayinci-format", YAYINCI_VARSAYILAN);
+        String colored = ChatColor.translateAlternateColorCodes('&', raw);
+        return colored.endsWith(" ") ? colored : colored + " ";
+    }
+
+    public boolean isYayinci(UUID uuid) {
+        return this.yayincilar.contains(uuid);
+    }
+
+    /** Oyuncunun yayıncı etiketi (renkli, sonunda boşluk ile) ya da yoksa null. */
+    public String getPlayerYayinci(UUID uuid) {
+        return this.yayincilar.contains(uuid) ? this.getYayinciFormat() : null;
+    }
+
+    public boolean setPlayerYayinci(OfflinePlayer target) {
+        if (!this.yayincilar.add(target.getUniqueId())) return false;
+        this.saveAll();
+        if (target.isOnline()) {
+            this.updateScoreboardTeam(target.getPlayer());
+        }
+        return true;
+    }
+
+    public boolean removePlayerYayinci(OfflinePlayer target) {
+        if (!this.yayincilar.remove(target.getUniqueId())) return false;
+        this.saveAll();
+        if (target.isOnline()) {
+            this.updateScoreboardTeam(target.getPlayer());
+        }
+        return true;
+    }
+
+    /** Kurucu + Yayıncı + Ek + Önek: tab listesinde ve chatte görünen tam önek. */
+    public String getFullPrefix(UUID uuid) {
+        String prefixName = this.playerTags.get(uuid);
+        String prefixFormat = prefixName != null && this.tagExists(prefixName) ? this.getTagFormat(prefixName) : "";
+        return this.playerKuruculer.getOrDefault(uuid, "")
+                + this.getPlayerYayinciOrEmpty(uuid)
+                + this.playerEkler.getOrDefault(uuid, "")
+                + prefixFormat;
+    }
+
+    private String getPlayerYayinciOrEmpty(UUID uuid) {
+        String y = this.getPlayerYayinci(uuid);
+        return y == null ? "" : y;
+    }
+
+    /**
+     * Oyuncunun kafasının üstündeki isimde görünen önek. Kurucu ve Yayıncı etiketleri config'teki
+     * kafa-ustu.kurucu / kafa-ustu.yayinci true değilse burada GİZLENİR (sadece tab ve chatte kalır).
+     */
+    public String getKafaPrefix(UUID uuid) {
+        String prefixName = this.playerTags.get(uuid);
+        String prefixFormat = prefixName != null && this.tagExists(prefixName) ? this.getTagFormat(prefixName) : "";
+        boolean kurucuGoster = this.plugin.getConfig().getBoolean("kafa-ustu.kurucu", false);
+        boolean yayinciGoster = this.plugin.getConfig().getBoolean("kafa-ustu.yayinci", false);
+        return (kurucuGoster ? this.playerKuruculer.getOrDefault(uuid, "") : "")
+                + (yayinciGoster ? this.getPlayerYayinciOrEmpty(uuid) : "")
+                + this.playerEkler.getOrDefault(uuid, "")
+                + prefixFormat;
+    }
+
+    /** Config yeniden okunduktan sonra tüm çevrimiçi oyuncuların isimlerini yeniler. */
+    public void updateAllOnline() {
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            this.updateScoreboardTeam(online);
         }
     }
 
@@ -339,51 +425,51 @@ public class TagManager {
         }
     }
 
-    // GÜNCELLENDİ: Prefix ve Suffix'i birleştirip takıma atayan dev motor
+    // Kafa üstü isim (scoreboard takımı) ile tab/chat adı AYRI hesaplanır:
+    // Kurucu ve Yayıncı etiketleri varsayılan olarak sadece tab listesinde ve chatte görünür.
     public void updateScoreboardTeam(Player player) {
-        String prefixName = this.playerTags.get(player.getUniqueId());
         String suffixName = this.playerSuffixes.get(player.getUniqueId());
-
-        String prefixFormat = prefixName != null && this.tagExists(prefixName) ? this.getTagFormat(prefixName) : "";
         String suffixFormat = suffixName != null && this.tagExists(suffixName) ? this.getTagFormat(suffixName) : "";
-        // Ek etiket önekin önüne gelir: [Ek] [Önek] İsim [Sonek]
-        String ekFormat = this.playerEkler.getOrDefault(player.getUniqueId(), "");
-        prefixFormat = this.playerKuruculer.getOrDefault(player.getUniqueId(), "") + ekFormat + prefixFormat;
         // Lig etiketi sonekin arkasına gelir: ... İsim [Sonek] [Lig]
         suffixFormat = suffixFormat + this.playerLigler.getOrDefault(player.getUniqueId(), "");
 
+        String tabPrefix = this.getFullPrefix(player.getUniqueId());
+        String kafaPrefix = this.getKafaPrefix(player.getUniqueId());
+
         Scoreboard board = Bukkit.getScoreboardManager().getMainScoreboard();
         String teamName = "tagplg_" + player.getUniqueId().toString().substring(0, 12);
-        
+
         Team team = board.getTeam(teamName);
         if (team != null) {
             team.removeEntry(player.getName());
             team.unregister();
         }
 
-        if (prefixFormat.isEmpty() && suffixFormat.isEmpty()) {
+        if (!kafaPrefix.isEmpty() || !suffixFormat.isEmpty()) {
+            team = board.registerNewTeam(teamName);
+            team.setPrefix(this.trimTo(kafaPrefix, 64));
+            team.setSuffix(this.trimTo(suffixFormat, 64));
+            team.setColor(ChatColor.WHITE);
+            team.addEntry(player.getName());
+        }
+
+        if (tabPrefix.isEmpty() && suffixFormat.isEmpty()) {
             player.playerListName(Component.text(player.getName()));
             player.setDisplayName(player.getName());
             return;
         }
 
-        team = board.registerNewTeam(teamName);
-        team.setPrefix(this.trimTo(prefixFormat, 64));
-        team.setSuffix(this.trimTo(suffixFormat, 64)); // Suffix eklendi!
-        team.setColor(ChatColor.WHITE);
-        team.addEntry(player.getName());
-
         Component finalListName = Component.empty();
-        if (!prefixFormat.isEmpty()) {
-            finalListName = finalListName.append(LegacyComponentSerializer.legacySection().deserialize(prefixFormat));
+        if (!tabPrefix.isEmpty()) {
+            finalListName = finalListName.append(LegacyComponentSerializer.legacySection().deserialize(tabPrefix));
         }
         finalListName = finalListName.append(Component.text(player.getName(), NamedTextColor.WHITE));
         if (!suffixFormat.isEmpty()) {
             finalListName = finalListName.append(LegacyComponentSerializer.legacySection().deserialize(suffixFormat));
         }
-        
+
         player.playerListName(finalListName);
-        player.setDisplayName(prefixFormat + ChatColor.WHITE + player.getName() + ChatColor.RESET + suffixFormat);
+        player.setDisplayName(tabPrefix + ChatColor.WHITE + player.getName() + ChatColor.RESET + suffixFormat);
     }
 
     public void clearScoreboardTag(Player player) {
