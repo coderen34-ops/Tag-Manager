@@ -43,6 +43,7 @@ public class TagCommand implements CommandExecutor, TabCompleter {
                 case "setyayinci": return this.handleSetYayinci(sender, args);
                 case "removeyayinci": return this.handleRemoveYayinci(sender, args);
                 case "reload": return this.handleReload(sender);
+                case "ensure": return this.handleEnsure(sender, args);
                 case "setek": return this.handleSetEk(sender, args);
                 case "removeek": return this.handleRemoveEk(sender, args);
                 case "setlig": return this.handleSetLig(sender, args);
@@ -201,6 +202,21 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    // /tag ensure <tagadı> <format>  — tag tanımı yoksa oluşturur (önek olarak kullanılacağı için sonuna boşluk eklenir),
+    // varsa hiçbir şey yapmaz. Diğer eklentilerin (örn. Meslek Sistemi: amir) gerekli tagi kendiliğinden hazırlaması içindir.
+    private boolean handleEnsure(CommandSender sender, String[] args) {
+        if (args.length < 3) {
+            sender.sendMessage(ChatColor.RED + "Kullanım: /tag ensure <tagadı> <format>");
+            return true;
+        }
+        if (this.tagManager.tagExists(args[1])) return true;
+        String rawFormat = String.join(" ", Arrays.copyOfRange(args, 2, args.length));
+        if (!rawFormat.endsWith(" ")) rawFormat = rawFormat + " ";
+        this.tagManager.createTag(args[1], rawFormat);
+        sender.sendMessage(ChatColor.GREEN + "Tag oluşturuldu: " + args[1] + " -> " + ChatColor.translateAlternateColorCodes('&', rawFormat) + ChatColor.RESET);
+        return true;
+    }
+
     // /tag reload  — config.yml'i (yayinci-format, kafa-ustu.*) yeniden okur ve herkesin ismini yeniler
     private boolean handleReload(CommandSender sender) {
         this.plugin.reloadConfig();
@@ -324,12 +340,13 @@ public class TagCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(ChatColor.YELLOW + "/tag setyayinci <oyuncu>" + ChatColor.GRAY + " - Kalın yeşil [Yayıncı] etiketi (tab + chat)");
         sender.sendMessage(ChatColor.YELLOW + "/tag removeyayinci <oyuncu>" + ChatColor.GRAY + " - Yayıncı etiketini kaldır");
         sender.sendMessage(ChatColor.YELLOW + "/tag reload" + ChatColor.GRAY + " - config.yml'i yeniden oku");
+        sender.sendMessage(ChatColor.YELLOW + "/tag ensure <tagadı> <format>" + ChatColor.GRAY + " - Tag yoksa oluştur, varsa dokunma");
     }
 
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> options = new ArrayList<>();
         if (args.length == 1) {
-            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup", "setek", "removeek", "setlig", "removelig", "setkurucu", "removekurucu", "setyayinci", "removeyayinci", "reload"));
+            options.addAll(Arrays.asList("set", "setsuffix", "remove", "removesuffix", "list", "create", "deletetag", "info", "cleanup", "setek", "removeek", "setlig", "removelig", "setkurucu", "removekurucu", "setyayinci", "removeyayinci", "reload", "ensure"));
             return this.filter(options, args[0]);
         } else if (args.length == 2) {
             switch (args[0].toLowerCase()) {
